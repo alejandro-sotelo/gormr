@@ -15,14 +15,14 @@ var carTestCases = []struct {
 	expected Car
 }{
 	{
-		 name:     "create and fetch car",
-		 input:    Car{Brand: "Toyota", Color: "Red", Year: 2020, Model: "Corolla"},
-		 expected: Car{ID: 1, Brand: "Toyota", Color: "Red", Year: 2020, Model: "Corolla"},
+		name:     "create and fetch car",
+		input:    Car{Brand: "Toyota", Color: "Red", Year: 2020, Model: "Corolla"},
+		expected: Car{ID: 1, Brand: "Toyota", Color: "Red", Year: 2020, Model: "Corolla"},
 	},
 	{
-		 name:     "create and fetch another car",
-		 input:    Car{Brand: "Ford", Color: "Blue", Year: 2018, Model: "Focus"},
-		 expected: Car{ID: 2, Brand: "Ford", Color: "Blue", Year: 2018, Model: "Focus"},
+		name:     "create and fetch another car",
+		input:    Car{Brand: "Ford", Color: "Blue", Year: 2018, Model: "Focus"},
+		expected: Car{ID: 2, Brand: "Ford", Color: "Blue", Year: 2018, Model: "Focus"},
 	},
 }
 

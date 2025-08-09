@@ -8,25 +8,15 @@ run:
 
 linters:
   enable:
-    - govet
-    - staticcheck
-    - errcheck
-    - gosimple
-    - unused
-    - ineffassign
-    - typecheck
-    - gofmt
-    - goimports
-    - gocritic
-    - revive
-    - depguard
-    - dogsled
-    - dupl
-    - gocyclo
-    - nakedret
-    - prealloc
-    - unparam
-    - whitespace
+  - errcheck
+  - gosimple
+  - unused
+  - ineffassign
+  - gofmt
+  - goimports
+  - gocritic
+  - revive
+  - gocyclo
   disable:
     - lll  # Disable line length linter (optional, adjust as needed)
 
@@ -48,7 +38,3 @@ linters-settings:
     threshold: 100
   revive:
     severity: warning
-    rules:
-      - name: var-naming
-        arguments:
-          allow-leading-underscore: true

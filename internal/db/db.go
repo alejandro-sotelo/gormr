@@ -56,124 +56,83 @@ func (c DBConfig) dsn() string {
 	driver := strings.ToLower(string(c.Driver))
 	switch driver {
 	case string(MySQL):
-		// defaults values for MySQL
-		if c.Params == nil {
-			c.Params = map[string]string{}
-		}
-		if _, ok := c.Params["charset"]; !ok {
-			c.Params["charset"] = "utf8mb4"
-		}
-		if _, ok := c.Params["parseTime"]; !ok {
-			c.Params["parseTime"] = "True"
-		}
-		if _, ok := c.Params["loc"]; !ok {
-			c.Params["loc"] = "Local"
-		}
-		pairs := []string{}
-		for k, v := range c.Params {
-			pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
-		}
-		params := ""
-		if len(pairs) > 0 {
-			params = "?" + strings.Join(pairs, "&")
-		}
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s%s", c.User, c.Password, c.Host, c.Port, c.DBName, params)
-
+		return c.mysqlDSN()
 	case string(Postgres), string(PostgreSQL):
-		parts := []string{fmt.Sprintf("host=%s", c.Host)}
-		if c.Port != 0 {
-			parts = append(parts, fmt.Sprintf("port=%d", c.Port))
-		}
-		if c.User != "" {
-			parts = append(parts, fmt.Sprintf("user=%s", c.User))
-		}
-		if c.Password != "" {
-			parts = append(parts, fmt.Sprintf("password=%s", c.Password))
-		}
-		if c.DBName != "" {
-			parts = append(parts, fmt.Sprintf("dbname=%s", c.DBName))
-		}
-		for k, v := range c.Params {
-			parts = append(parts, fmt.Sprintf("%s=%s", k, v))
-		}
-		return strings.Join(parts, " ")
-
+		return c.postgresDSN()
 	case string(SQLite):
-		// DBName is a file path or ":memory:"
-		return c.DBName
-
+		return c.sqliteDSN()
 	case string(SQLServer):
-		pairs := []string{}
-		for k, v := range c.Params {
-			pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
-		}
-		params := ""
-		if len(pairs) > 0 {
-			params = "&" + strings.Join(pairs, "&")
-		}
-		return fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s%s", c.User, c.Password, c.Host, c.Port, c.DBName, params)
-
+		return c.sqlserverDSN()
 	default:
 		panic("unsupported driver: " + string(c.Driver))
 	}
 }
 
+func (c DBConfig) mysqlDSN() string {
+	if c.Params == nil {
+		c.Params = map[string]string{}
+	}
+	if _, ok := c.Params["charset"]; !ok {
+		c.Params["charset"] = "utf8mb4"
+	}
+	if _, ok := c.Params["parseTime"]; !ok {
+		c.Params["parseTime"] = "True"
+	}
+	if _, ok := c.Params["loc"]; !ok {
+		c.Params["loc"] = "Local"
+	}
+	pairs := []string{}
+	for k, v := range c.Params {
+		pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
+	}
+	params := ""
+	if len(pairs) > 0 {
+		params = "?" + strings.Join(pairs, "&")
+	}
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s%s", c.User, c.Password, c.Host, c.Port, c.DBName, params)
+}
+
+func (c DBConfig) postgresDSN() string {
+	parts := []string{fmt.Sprintf("host=%s", c.Host)}
+	if c.Port != 0 {
+		parts = append(parts, fmt.Sprintf("port=%d", c.Port))
+	}
+	if c.User != "" {
+		parts = append(parts, fmt.Sprintf("user=%s", c.User))
+	}
+	if c.Password != "" {
+		parts = append(parts, fmt.Sprintf("password=%s", c.Password))
+	}
+	if c.DBName != "" {
+		parts = append(parts, fmt.Sprintf("dbname=%s", c.DBName))
+	}
+	for k, v := range c.Params {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(parts, " ")
+}
+
+func (c DBConfig) sqliteDSN() string {
+	return c.DBName
+}
+
+func (c DBConfig) sqlserverDSN() string {
+	pairs := []string{}
+	for k, v := range c.Params {
+		pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
+	}
+	params := ""
+	if len(pairs) > 0 {
+		params = "&" + strings.Join(pairs, "&")
+	}
+	return fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s%s", c.User, c.Password, c.Host, c.Port, c.DBName, params)
+}
+
 // Connect opens a gorm.DB connection using DBConfig and configures the pool.
 func Connect(cfg DBConfig) (*gorm.DB, error) {
-	driver := strings.ToLower(string(cfg.Driver))
-	var dialector gorm.Dialector
-
-	// Config validation
-	switch driver {
-	case string(MySQL):
-		if cfg.Host == "" {
-			return nil, fmt.Errorf("gormr: missing Host for MySQL connection")
-		}
-		if cfg.Port == 0 {
-			return nil, fmt.Errorf("gormr: missing Port for MySQL connection")
-		}
-		if cfg.User == "" {
-			return nil, fmt.Errorf("gormr: missing User for MySQL connection")
-		}
-		if cfg.DBName == "" {
-			return nil, fmt.Errorf("gormr: missing DBName for MySQL connection")
-		}
-		dialector = mysql.Open(cfg.dsn())
-	case string(Postgres), string(PostgreSQL):
-		if cfg.Host == "" {
-			return nil, fmt.Errorf("gormr: missing Host for Postgres connection")
-		}
-		if cfg.Port == 0 {
-			return nil, fmt.Errorf("gormr: missing Port for Postgres connection")
-		}
-		if cfg.User == "" {
-			return nil, fmt.Errorf("gormr: missing User for Postgres connection")
-		}
-		if cfg.DBName == "" {
-			return nil, fmt.Errorf("gormr: missing DBName for Postgres connection")
-		}
-		dialector = postgres.Open(cfg.dsn())
-	case string(SQLite):
-		if cfg.DBName == "" {
-			return nil, fmt.Errorf("gormr: missing DBName (file path or :memory:) for SQLite connection")
-		}
-		dialector = sqlite.Open(cfg.dsn())
-	case string(SQLServer):
-		if cfg.Host == "" {
-			return nil, fmt.Errorf("gormr: missing Host for SQLServer connection")
-		}
-		if cfg.Port == 0 {
-			return nil, fmt.Errorf("gormr: missing Port for SQLServer connection")
-		}
-		if cfg.User == "" {
-			return nil, fmt.Errorf("gormr: missing User for SQLServer connection")
-		}
-		if cfg.DBName == "" {
-			return nil, fmt.Errorf("gormr: missing DBName for SQLServer connection")
-		}
-		dialector = sqlserver.Open(cfg.dsn())
-	default:
-		return nil, fmt.Errorf("gormr: unsupported driver: %s", cfg.Driver)
+	dialector, err := getDialector(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	gormCfg := &gorm.Config{
@@ -210,4 +169,75 @@ func Connect(cfg DBConfig) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(time.Duration(maxLife) * time.Second)
 
 	return gdb, nil
+}
+
+func getDialector(cfg DBConfig) (gorm.Dialector, error) {
+	driver := strings.ToLower(string(cfg.Driver))
+	switch driver {
+	case string(MySQL):
+		return getMySQLDialector(cfg)
+	case string(Postgres), string(PostgreSQL):
+		return getPostgresDialector(cfg)
+	case string(SQLite):
+		return getSQLiteDialector(cfg)
+	case string(SQLServer):
+		return getSQLServerDialector(cfg)
+	default:
+		return nil, fmt.Errorf("gormr: unsupported driver: %s", cfg.Driver)
+	}
+}
+
+func getMySQLDialector(cfg DBConfig) (gorm.Dialector, error) {
+	if cfg.Host == "" {
+		return nil, fmt.Errorf("gormr: missing Host for MySQL connection")
+	}
+	if cfg.Port == 0 {
+		return nil, fmt.Errorf("gormr: missing Port for MySQL connection")
+	}
+	if cfg.User == "" {
+		return nil, fmt.Errorf("gormr: missing User for MySQL connection")
+	}
+	if cfg.DBName == "" {
+		return nil, fmt.Errorf("gormr: missing DBName for MySQL connection")
+	}
+	return mysql.Open(cfg.dsn()), nil
+}
+
+func getPostgresDialector(cfg DBConfig) (gorm.Dialector, error) {
+	if cfg.Host == "" {
+		return nil, fmt.Errorf("gormr: missing Host for Postgres connection")
+	}
+	if cfg.Port == 0 {
+		return nil, fmt.Errorf("gormr: missing Port for Postgres connection")
+	}
+	if cfg.User == "" {
+		return nil, fmt.Errorf("gormr: missing User for Postgres connection")
+	}
+	if cfg.DBName == "" {
+		return nil, fmt.Errorf("gormr: missing DBName for Postgres connection")
+	}
+	return postgres.Open(cfg.dsn()), nil
+}
+
+func getSQLiteDialector(cfg DBConfig) (gorm.Dialector, error) {
+	if cfg.DBName == "" {
+		return nil, fmt.Errorf("gormr: missing DBName (file path or :memory:) for SQLite connection")
+	}
+	return sqlite.Open(cfg.dsn()), nil
+}
+
+func getSQLServerDialector(cfg DBConfig) (gorm.Dialector, error) {
+	if cfg.Host == "" {
+		return nil, fmt.Errorf("gormr: missing Host for SQLServer connection")
+	}
+	if cfg.Port == 0 {
+		return nil, fmt.Errorf("gormr: missing Port for SQLServer connection")
+	}
+	if cfg.User == "" {
+		return nil, fmt.Errorf("gormr: missing User for SQLServer connection")
+	}
+	if cfg.DBName == "" {
+		return nil, fmt.Errorf("gormr: missing DBName for SQLServer connection")
+	}
+	return sqlserver.Open(cfg.dsn()), nil
 }

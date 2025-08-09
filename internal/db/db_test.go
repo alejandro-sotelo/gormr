@@ -36,10 +36,8 @@ func compareDSN(t *testing.T, got, want string) {
 				t.Errorf("dsn param %q = %q, want %q", k, gotMap[k], v)
 			}
 		}
-	} else {
-		if got != want {
-			t.Errorf("dsn() = %q, want %q", got, want)
-		}
+	} else if got != want {
+		t.Errorf("dsn() = %q, want %q", got, want)
 	}
 }
 
@@ -56,10 +54,8 @@ func TestDBConfig_dsn(t *testing.T) {
 			// Assert
 			if strings.HasPrefix(want, "root:@tcp(") || strings.HasPrefix(want, "user:pass@tcp(") {
 				compareDSN(t, got, want)
-			} else {
-				if got != want {
-					t.Errorf("dsn() = %q, want %q", got, want)
-				}
+			} else if got != want {
+				t.Errorf("dsn() = %q, want %q", got, want)
 			}
 		})
 	}

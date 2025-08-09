@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"testing"
 	"errors"
+	"testing"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -15,7 +15,9 @@ func TestCarRepository_DeleteByID(t *testing.T) {
 	ctx := context.Background()
 
 	car := Car{Brand: "Mazda", Color: "Gray", Year: 2019, Model: "3"}
-	repo.Create(ctx, &car)
+	if err := repo.Create(ctx, &car); err != nil {
+		t.Fatalf("failed to create car: %v", err)
+	}
 
 	if err := repo.DeleteByID(ctx, &Car{}, car.ID); err != nil {
 		t.Fatalf("DeleteByID failed: %v", err)
@@ -34,7 +36,9 @@ func TestCarRepository_GetByID(t *testing.T) {
 	ctx := context.Background()
 
 	car := Car{Brand: "Nissan", Color: "Green", Year: 2017, Model: "Sentra"}
-	repo.Create(ctx, &car)
+	if err := repo.Create(ctx, &car); err != nil {
+		t.Fatalf("failed to create car: %v", err)
+	}
 
 	var got Car
 	err := repo.GetByID(ctx, &Car{}, car.ID, &got)
@@ -52,7 +56,9 @@ func TestCarRepository_GetAll(t *testing.T) {
 	ctx := context.Background()
 
 	for _, c := range carGetAllTestData {
-		repo.Create(ctx, &Car{Brand: c.Brand, Color: c.Color, Year: c.Year, Model: c.Model})
+		if err := repo.Create(ctx, &Car{Brand: c.Brand, Color: c.Color, Year: c.Year, Model: c.Model}); err != nil {
+			t.Fatalf("failed to create car: %v", err)
+		}
 	}
 
 	var cars []Car
@@ -71,7 +77,9 @@ func TestCarRepository_GetPaginated(t *testing.T) {
 	ctx := context.Background()
 
 	for _, c := range carPaginatedTestData {
-		repo.Create(ctx, &Car{Brand: c.Brand, Color: c.Color, Year: c.Year, Model: c.Model})
+		if err := repo.Create(ctx, &Car{Brand: c.Brand, Color: c.Color, Year: c.Year, Model: c.Model}); err != nil {
+			t.Fatalf("failed to create car: %v", err)
+		}
 	}
 
 	var cars []Car
@@ -93,7 +101,9 @@ func TestCarRepository_GetByField(t *testing.T) {
 	ctx := context.Background()
 
 	for _, c := range carByFieldTestData {
-		repo.Create(ctx, &Car{Brand: c.Brand, Color: c.Color, Year: c.Year, Model: c.Model})
+		if err := repo.Create(ctx, &Car{Brand: c.Brand, Color: c.Color, Year: c.Year, Model: c.Model}); err != nil {
+			t.Fatalf("failed to create car: %v", err)
+		}
 	}
 
 	var cars []Car
@@ -120,7 +130,9 @@ func TestCarRepository_Transaction(t *testing.T) {
 	}
 
 	var cars []Car
-	repo.GetByField(ctx, &Car{}, "brand", "Fiat", &cars)
+	if err := repo.GetByField(ctx, &Car{}, "brand", "Fiat", &cars); err != nil {
+		t.Fatalf("failed to get cars by field: %v", err)
+	}
 	if len(cars) != 1 {
 		t.Errorf("expected 1 Fiat after transaction, got %d", len(cars))
 	}
@@ -148,13 +160,11 @@ func TestCarRepository_ManualTx(t *testing.T) {
 	}
 }
 
-func TestCarRepository_CRUD(t *testing.T) {
+func TestCarRepository_Create(t *testing.T) {
 	db := setupTestDB(t)
 	ctx := context.Background()
-
 	for _, tt := range carTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create
 			car := tt.input
 			if err := db.WithContext(ctx).Create(&car).Error; err != nil {
 				t.Fatalf("failed to create car: %v", err)
@@ -162,8 +172,19 @@ func TestCarRepository_CRUD(t *testing.T) {
 			if car.ID == 0 {
 				t.Fatal("expected car ID to be set after create")
 			}
+		})
+	}
+}
 
-			// Read
+func TestCarRepository_Read(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+	for _, tt := range carTestCases {
+		t.Run(tt.name, func(t *testing.T) {
+			car := tt.input
+			if err := db.WithContext(ctx).Create(&car).Error; err != nil {
+				t.Fatalf("failed to create car: %v", err)
+			}
 			var got Car
 			if err := db.WithContext(ctx).First(&got, car.ID).Error; err != nil {
 				t.Fatalf("failed to fetch car: %v", err)
@@ -171,9 +192,20 @@ func TestCarRepository_CRUD(t *testing.T) {
 			if got.Brand != tt.expected.Brand || got.Color != tt.expected.Color || got.Year != tt.expected.Year || got.Model != tt.expected.Model {
 				t.Errorf("got %+v, want %+v", got, tt.expected)
 			}
+		})
+	}
+}
 
-			// Update
-			if err := db.WithContext(ctx).Model(&got).Updates(Car{Color: "White", Year: 2022}).Error; err != nil {
+func TestCarRepository_Update(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+	for _, tt := range carTestCases {
+		t.Run(tt.name, func(t *testing.T) {
+			car := tt.input
+			if err := db.WithContext(ctx).Create(&car).Error; err != nil {
+				t.Fatalf("failed to create car: %v", err)
+			}
+			if err := db.WithContext(ctx).Model(&car).Updates(Car{Color: "White", Year: 2022}).Error; err != nil {
 				t.Fatalf("failed to update car: %v", err)
 			}
 			var updated Car
@@ -183,8 +215,19 @@ func TestCarRepository_CRUD(t *testing.T) {
 			if updated.Color != "White" || updated.Year != 2022 {
 				t.Errorf("update failed, got %+v", updated)
 			}
+		})
+	}
+}
 
-			// Delete
+func TestCarRepository_Delete(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+	for _, tt := range carTestCases {
+		t.Run(tt.name, func(t *testing.T) {
+			car := tt.input
+			if err := db.WithContext(ctx).Create(&car).Error; err != nil {
+				t.Fatalf("failed to create car: %v", err)
+			}
 			if err := db.WithContext(ctx).Delete(&Car{}, car.ID).Error; err != nil {
 				t.Fatalf("failed to delete car: %v", err)
 			}
@@ -197,7 +240,6 @@ func TestCarRepository_CRUD(t *testing.T) {
 	}
 }
 
-
 func setupTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -207,31 +249,4 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 	return db
-}
-
-func TestCarRepository_CreateAndFetch(t *testing.T) {
-	db := setupTestDB(t)
-	ctx := context.Background()
-
-	for _, tt := range carTestCases {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			car := tt.input
-
-			// Act
-			if err := db.WithContext(ctx).Create(&car).Error; err != nil {
-				t.Fatalf("failed to create car: %v", err)
-			}
-
-			var got Car
-			if err := db.WithContext(ctx).First(&got, car.ID).Error; err != nil {
-				t.Fatalf("failed to fetch car: %v", err)
-			}
-
-			// Assert
-			if got.Brand != tt.expected.Brand || got.Color != tt.expected.Color || got.Year != tt.expected.Year || got.Model != tt.expected.Model {
-				t.Errorf("got %+v, want %+v", got, tt.expected)
-			}
-		})
-	}
 }
