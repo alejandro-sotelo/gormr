@@ -1,0 +1,54 @@
+# GolangCI-Lint configuration file for gormr
+# See https://golangci-lint.run/usage/configuration/ for all options
+
+run:
+  timeout: 5m
+  tests: true
+  go: "1.24"
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosimple
+    - unused
+    - ineffassign
+    - typecheck
+    - gofmt
+    - goimports
+    - gocritic
+    - revive
+    - depguard
+    - dogsled
+    - dupl
+    - gocyclo
+    - nakedret
+    - prealloc
+    - unparam
+    - whitespace
+  disable:
+    - lll  # Disable line length linter (optional, adjust as needed)
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+
+# Optional: Custom settings for specific linters
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  revive:
+    severity: warning
+    rules:
+      - name: var-naming
+        arguments:
+          allow-leading-underscore: true
